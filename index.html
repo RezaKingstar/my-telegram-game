@@ -38,11 +38,12 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
-
-        const userInfo = document.getElementById('user-info');
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            userInfo.innerText = "بازیکن: " + tg.initDataUnsafe.user.first_name;
+        if (tg) {
+            tg.expand();
+            const userInfo = document.getElementById('user-info');
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                userInfo.innerText = "بازیکن: " + tg.initDataUnsafe.user.first_name;
+            }
         }
 
         let board = ["", "", "", "", "", "", "", "", ""];
@@ -73,10 +74,12 @@
         }
 
         function botMove() {
+            if (gameOver) return;
+            
             let emptyCells = [];
             board.forEach((val, idx) => { if (val === "") emptyCells.push(idx); });
 
-            if (emptyCells.length === 0 || gameOver) return;
+            if (emptyCells.length === 0) return;
 
             let randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
             board[randomIndex] = "O";
@@ -96,7 +99,8 @@
         }
 
         function checkWin(player) {
-            const winPatterns = [, [3, 4, 5], [6, 7, 8], // افقی, [1, 4, 7], [2, 5, 8], // عمودی, [2, 4, 6]             // قطری
+            // الگوهای برنده شدن اصلاح شده: ۳ تا افقی، ۳ تا عمودی، ۲ تا قطری
+            const winPatterns = [, [3, 4, 5], [6, 7, 8], , [1, 4, 7], [2, 5, 8], , [2, 4, 6]             
             ];
             return winPatterns.some(pattern => {
                 return pattern.every(idx => board[idx] === player);
