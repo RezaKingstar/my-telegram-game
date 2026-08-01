@@ -3,28 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
-    <title>بازی برج سازی تلگرام</title>
+    <title>تپ کلیکر تلگرام</title>
     <script src="https://telegram.org"></script>
     <style>
-        body { font-family: Tahoma, sans-serif; text-align: center; background: #1e1e24; margin: 0; padding: 0; direction: rtl; overflow: hidden; color: white; }
-        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #score-display { position: absolute; top: 20px; font-size: 32px; font-weight: bold; color: #0088cc; text-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 10; }
-        #user-info { position: absolute; top: 70px; font-size: 14px; color: #aaa; z-index: 10; }
-        canvas { background: #282830; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 100%; max-height: 70vh; border-radius: 12px; }
-        #msg { position: absolute; bottom: 120px; font-size: 18px; color: #ff3366; font-weight: bold; z-index: 10; }
-        .btn-restart { position: absolute; bottom: 40px; padding: 12px 30px; font-size: 16px; background: #0088cc; color: white; border: none; border-radius: 25px; cursor: pointer; font-family: Tahoma; font-weight: bold; display: none; z-index: 10; box-shadow: 0 4px 15px rgba(0,136,204,0.4); }
+        body { font-family: Tahoma, sans-serif; text-align: center; background: #1a1a1a; margin: 0; padding: 20px; direction: rtl; color: white; overflow: hidden; }
+        h1 { color: #fff; font-size: 20px; margin-top: 10px; }
+        #user-info { margin-bottom: 20px; color: #0088cc; font-weight: bold; }
+        .score-container { font-size: 36px; font-weight: bold; margin: 20px 0; color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+        .coin-wrapper { display: flex; justify-content: center; margin-top: 40px; }
+        .coin { width: 160px; height: 160px; background: linear-gradient(135deg, #ffd700, #ffa500); border-radius: 50%; border: 8px solid #cc8400; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 60px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); user-select: none; transition: transform 0.05s ease; }
+        .coin:active { transform: scale(0.92); box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+        .upgrade-section { margin-top: 50px; background: #2a2a2a; padding: 15px; border-radius: 12px; display: inline-block; min-width: 260px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .upgrade-btn { background: #4bcd5d; color: white; border: none; padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; font-family: Tahoma; width: 100%; transition: 0.2s; }
+        .upgrade-btn:disabled { background: #555; color: #aaa; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div id="score-display">امتیاز: 0</div>
-        <div id="user-info">بازیکن: مهمان</div>
-        
-        <canvas id="gameCanvas" width="360" height="500"></canvas>
-        
-        <div id="msg">برای گذاشتن بلوک روی صفحه کلیک کنید!</div>
-        <button class="btn-restart" id="restartBtn" onclick="restartGame()">🔄 شروع مجدد</button>
+    <h1>بازی سکه تلگرام 🪙</h1>
+    <div id="user-info">بازیکن: مهمان</div>
+    
+    <div class="score-container" id="score">0</div>
+
+    <div class="coin-wrapper">
+        <div class="coin" id="coinBtn" onclick="clickCoin()">🪙</div>
+    </div>
+
+    <div class="upgrade-section">
+        <div style="margin-bottom: 10px; font-size: 14px; color: #ccc;">قدرت هر کلیک: <span id="clickPower">۱</span></div>
+        <button class="upgrade-btn" id="upgradeBtn" onclick="buyUpgrade()" disabled>ارتقا کلیک (هزینه: ۵۰ سکه)</button>
     </div>
 
     <script>
@@ -37,131 +44,41 @@
             }
         }
 
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
+        let coins = 0;
+        let power = 1;
+        let upgradeCost = 50;
 
-        let score = 0;
-        let gameOver = false;
-        const blockHeight = 30;
+        function updateUI() {
+            document.getElementById('score').innerText = coins;
+            document.getElementById('clickPower').innerText = power;
+            document.getElementById('upgradeBtn').innerText = "ارتقا کلیک (هزینه: " + upgradeCost + " سکه)";
+            
+            if (coins >= upgradeCost) {
+                document.getElementById('upgradeBtn').disabled = false;
+            } else {
+                document.getElementById('upgradeBtn').disabled = true;
+            }
+        }
+
+        function clickCoin() {
+            coins = coins + power;
+            updateUI();
+            
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+        }
+
+        function buyUpgrade() {
+            if (coins >= upgradeCost) {
+                coins = coins - upgradeCost;
+                power = power + 1;
+                upgradeCost = Math.round(upgradeCost * 2.2);
+                updateUI();
+            }
+        }
         
-        // آرایه بلاک‌های چیده شده
-        let stack = [];
-        // بلاک در حال حرکت فعلی
-        let currentBlock = {};
-        let gameSpeed = 2;
-
-        function initGame() {
-            score = 0;
-            gameOver = false;
-            gameSpeed = 2;
-            document.getElementById("score-display").innerText = "امتیاز: " + score;
-            document.getElementById("msg").innerText = "برای گذاشتن بلوک روی صفحه کلیک کنید!";
-            document.getElementById("restartBtn").style.display = "none";
-            
-            // بلاک پایه ثابت در زمین
-            stack = [
-                { x: 80, width: 200, color: "#0088cc" }
-            ];
-            
-            spawnBlock();
-            animate();
-        }
-
-        function spawnBlock() {
-            const lastBlock = stack[stack.length - 1];
-            currentBlock = {
-                x: 0,
-                width: lastBlock.width,
-                direction: 1, // 1 راست، -1 چپ
-                color: "hsl(" + (stack.length * 15 % 360) + ", 70%, 60%)"
-            };
-        }
-
-        // کلیک روی کانواس یا دکمه صفحه جهت گذاشتن بلاک
-        canvas.addEventListener("click", function(e) {
-            if (gameOver) return;
-            e.preventDefault();
-            placeBlock();
-        });
-
-        function placeBlock() {
-            const lastBlock = stack[stack.length - 1];
-            
-            // محاسبه میزان بیرون‌زدگی
-            const leftBound = lastBlock.x;
-            const rightBound = lastBlock.x + lastBlock.width;
-            
-            // اگر کاملا خارج از محدوده باشد یعنی باخت
-            if (currentBlock.x + currentBlock.width < leftBound || currentBlock.x > rightBound) {
-                endGame();
-                return;
-            }
-
-            // محاسبه بخش جدید هم‌پوشانی شده
-            let newX = Math.max(currentBlock.x, leftBound);
-            let newRight = Math.min(currentBlock.x + currentBlock.width, rightBound);
-            let newWidth = newRight - newX;
-
-            // ثبت بلوک چیده شده جدید
-            stack.push({
-                x: newX,
-                width: newWidth,
-                color: currentBlock.color
-            });
-
-            score++;
-            document.getElementById("score-display").innerText = "امتیاز: " + score;
-            
-            // افزایش تدریجی سرعت برای هیجان بیشتر
-            if (score % 3 === 0) gameSpeed += 0.5;
-
-            spawnBlock();
-        }
-
-        function endGame() {
-            gameOver = true;
-            document.getElementById("msg").innerText = "💥 بازی تمام شد!";
-            document.getElementById("restartBtn").style.display = "block";
-        }
-
-        function animate() {
-            if (gameOver) return;
-
-            // پاک کردن صفحه
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // حرکت دادن بلوک جاری
-            currentBlock.x += currentBlock.direction * gameSpeed;
-            if (currentBlock.x + currentBlock.width > canvas.width) {
-                currentBlock.direction = -1;
-            } else if (currentBlock.x < 0) {
-                currentBlock.direction = 1;
-            }
-
-            // رسم بلوک‌های چیده شده قبلی (تا حداکثر ۱۰ بلوک آخر برای مدیریت ارتفاع دوربین)
-            const startIdx = Math.max(0, stack.length - 10);
-            for (let i = startIdx; i < stack.length; i++) {
-                const b = stack[i];
-                // محاسبه ارتفاع رسم به طوری که بازی همیشه به سمت بالا رشد کند
-                const yPos = canvas.height - blockHeight - ((stack.length - 1 - i) * blockHeight) - 50;
-                ctx.fillStyle = b.color;
-                ctx.fillRect(b.x, yPos, b.width, blockHeight - 2); // منهای ۲ برای ایجاد خط مرزی ظریف
-            }
-
-            // رسم بلوک متحرک فعلی در بالای برج
-            const currentY = canvas.height - blockHeight - (1 * blockHeight) - 50;
-            ctx.fillStyle = currentBlock.color;
-            ctx.fillRect(currentBlock.x, currentY, currentBlock.width, blockHeight - 2);
-
-            requestAnimationFrame(animate);
-        }
-
-        function restartGame() {
-            initGame();
-        }
-
-        // شروع اولیه بازی
-        initGame();
+        updateUI();
     </script>
 </body>
 </html>
