@@ -99,8 +99,7 @@
         }
 
         function checkWin(player) {
-            // الگوهای برنده شدن اصلاح شده: ۳ تا افقی، ۳ تا عمودی، ۲ تا قطری
-            const winPatterns = [, [3, 4, 5], [6, 7, 8], , [1, 4, 7], [2, 5, 8], , [2, 4, 6]             
+            const winPatterns = [, [3, 4, 5], [6, 7, 8], // افقی, [1, 4, 7], [2, 5, 8], // عمودی, [2, 4, 6]             // قطری
             ];
             return winPatterns.some(pattern => {
                 return pattern.every(idx => board[idx] === player);
