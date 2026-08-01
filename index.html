@@ -2,35 +2,29 @@
 <html lang="fa">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سنگ کاغذ قیچی تلگرام</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
+    <title>بازی برج سازی تلگرام</title>
     <script src="https://telegram.org"></script>
     <style>
-        body { font-family: Tahoma, sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 20px; direction: rtl; }
-        h1 { color: #333; font-size: 22px; }
-        #user-info { margin-bottom: 20px; color: #0088cc; font-weight: bold; font-size: 16px; }
-        .choices { display: flex; gap: 15px; justify-content: center; margin-top: 30px; }
-        .choice-btn { font-size: 40px; background: white; border: 3px solid #0088cc; border-radius: 15px; width: 80px; height: 80px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
-        .choice-btn:hover { background: #e6f7ff; transform: scale(1.1); }
-        .result-box { margin-top: 30px; font-size: 18px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: inline-block; min-width: 250px; }
-        #status { font-weight: bold; font-size: 20px; color: #ff3366; margin-top: 15px; }
+        body { font-family: Tahoma, sans-serif; text-align: center; background: #1e1e24; margin: 0; padding: 0; direction: rtl; overflow: hidden; color: white; }
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #score-display { position: absolute; top: 20px; font-size: 32px; font-weight: bold; color: #0088cc; text-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 10; }
+        #user-info { position: absolute; top: 70px; font-size: 14px; color: #aaa; z-index: 10; }
+        canvas { background: #282830; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 100%; max-height: 70vh; border-radius: 12px; }
+        #msg { position: absolute; bottom: 120px; font-size: 18px; color: #ff3366; font-weight: bold; z-index: 10; }
+        .btn-restart { position: absolute; bottom: 40px; padding: 12px 30px; font-size: 16px; background: #0088cc; color: white; border: none; border-radius: 25px; cursor: pointer; font-family: Tahoma; font-weight: bold; display: none; z-index: 10; box-shadow: 0 4px 15px rgba(0,136,204,0.4); }
     </style>
 </head>
 <body>
 
-    <h1>بازی سنگ، کاغذ، قیچی! ✌️✊✋</h1>
-    <div id="user-info">بازیکن: مهمان</div>
-    
-    <div class="choices">
-        <button class="choice-btn" onclick="play('سنگ')">✊</button>
-        <button class="choice-btn" onclick="play('کاغذ')">✋</button>
-        <button class="choice-btn" onclick="play('قیچی')">✌️</button>
-    </div>
-
-    <div class="result-box">
-        <div>انتخاب شما: <span id="user-choice">-</span></div>
-        <div>انتخاب ربات: <span id="bot-choice">-</span></div>
-        <div id="status">یک گزینه را انتخاب کنید!</div>
+    <div id="game-container">
+        <div id="score-display">امتیاز: 0</div>
+        <div id="user-info">بازیکن: مهمان</div>
+        
+        <canvas id="gameCanvas" width="360" height="500"></canvas>
+        
+        <div id="msg">برای گذاشتن بلوک روی صفحه کلیک کنید!</div>
+        <button class="btn-restart" id="restartBtn" onclick="restartGame()">🔄 شروع مجدد</button>
     </div>
 
     <script>
@@ -43,32 +37,131 @@
             }
         }
 
-        function play(userChoice) {
-            document.getElementById('user-choice').innerText = userChoice;
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let score = 0;
+        let gameOver = false;
+        const blockHeight = 30;
+        
+        // آرایه بلاک‌های چیده شده
+        let stack = [];
+        // بلاک در حال حرکت فعلی
+        let currentBlock = {};
+        let gameSpeed = 2;
+
+        function initGame() {
+            score = 0;
+            gameOver = false;
+            gameSpeed = 2;
+            document.getElementById("score-display").innerText = "امتیاز: " + score;
+            document.getElementById("msg").innerText = "برای گذاشتن بلوک روی صفحه کلیک کنید!";
+            document.getElementById("restartBtn").style.display = "none";
             
-            // انتخاب رندوم ربات
-            const options = ["سنگ", "کاغذ", "قیچی"];
-            const botChoice = options[Math.floor(Math.random() * 3)];
-            document.getElementById('bot-choice').innerText = botChoice;
+            // بلاک پایه ثابت در زمین
+            stack = [
+                { x: 80, width: 200, color: "#0088cc" }
+            ];
             
-            const statusDiv = document.getElementById('status');
-            
-            // بررسی برنده و بازنده
-            if (userChoice === botChoice) {
-                statusDiv.innerText = "بازی مساوی شد! 🤝";
-                statusDiv.style.color = "#8e8e93";
-            } else if (
-                (userChoice === "سنگ" && botChoice === "قیچی") ||
-                (userChoice === "کاغذ" && botChoice === "سنگ") ||
-                (userChoice === "قیچی" && botChoice === "کاغذ")
-            ) {
-                statusDiv.innerText = "شما برنده شدید! 🎉";
-                statusDiv.style.color = "#4bcd5d";
-            } else {
-                statusDiv.innerText = "ربات برنده شد! 🤖";
-                statusDiv.style.color = "#ff3366";
-            }
+            spawnBlock();
+            animate();
         }
+
+        function spawnBlock() {
+            const lastBlock = stack[stack.length - 1];
+            currentBlock = {
+                x: 0,
+                width: lastBlock.width,
+                direction: 1, // 1 راست، -1 چپ
+                color: "hsl(" + (stack.length * 15 % 360) + ", 70%, 60%)"
+            };
+        }
+
+        // کلیک روی کانواس یا دکمه صفحه جهت گذاشتن بلاک
+        canvas.addEventListener("click", function(e) {
+            if (gameOver) return;
+            e.preventDefault();
+            placeBlock();
+        });
+
+        function placeBlock() {
+            const lastBlock = stack[stack.length - 1];
+            
+            // محاسبه میزان بیرون‌زدگی
+            const leftBound = lastBlock.x;
+            const rightBound = lastBlock.x + lastBlock.width;
+            
+            // اگر کاملا خارج از محدوده باشد یعنی باخت
+            if (currentBlock.x + currentBlock.width < leftBound || currentBlock.x > rightBound) {
+                endGame();
+                return;
+            }
+
+            // محاسبه بخش جدید هم‌پوشانی شده
+            let newX = Math.max(currentBlock.x, leftBound);
+            let newRight = Math.min(currentBlock.x + currentBlock.width, rightBound);
+            let newWidth = newRight - newX;
+
+            // ثبت بلوک چیده شده جدید
+            stack.push({
+                x: newX,
+                width: newWidth,
+                color: currentBlock.color
+            });
+
+            score++;
+            document.getElementById("score-display").innerText = "امتیاز: " + score;
+            
+            // افزایش تدریجی سرعت برای هیجان بیشتر
+            if (score % 3 === 0) gameSpeed += 0.5;
+
+            spawnBlock();
+        }
+
+        function endGame() {
+            gameOver = true;
+            document.getElementById("msg").innerText = "💥 بازی تمام شد!";
+            document.getElementById("restartBtn").style.display = "block";
+        }
+
+        function animate() {
+            if (gameOver) return;
+
+            // پاک کردن صفحه
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // حرکت دادن بلوک جاری
+            currentBlock.x += currentBlock.direction * gameSpeed;
+            if (currentBlock.x + currentBlock.width > canvas.width) {
+                currentBlock.direction = -1;
+            } else if (currentBlock.x < 0) {
+                currentBlock.direction = 1;
+            }
+
+            // رسم بلوک‌های چیده شده قبلی (تا حداکثر ۱۰ بلوک آخر برای مدیریت ارتفاع دوربین)
+            const startIdx = Math.max(0, stack.length - 10);
+            for (let i = startIdx; i < stack.length; i++) {
+                const b = stack[i];
+                // محاسبه ارتفاع رسم به طوری که بازی همیشه به سمت بالا رشد کند
+                const yPos = canvas.height - blockHeight - ((stack.length - 1 - i) * blockHeight) - 50;
+                ctx.fillStyle = b.color;
+                ctx.fillRect(b.x, yPos, b.width, blockHeight - 2); // منهای ۲ برای ایجاد خط مرزی ظریف
+            }
+
+            // رسم بلوک متحرک فعلی در بالای برج
+            const currentY = canvas.height - blockHeight - (1 * blockHeight) - 50;
+            ctx.fillStyle = currentBlock.color;
+            ctx.fillRect(currentBlock.x, currentY, currentBlock.width, blockHeight - 2);
+
+            requestAnimationFrame(animate);
+        }
+
+        function restartGame() {
+            initGame();
+        }
+
+        // شروع اولیه بازی
+        initGame();
     </script>
 </body>
 </html>
