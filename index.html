@@ -4,23 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>بازی دوز تلگرام</title>
-    <!-- بارگذاری کتابخانه رسمی تلگرام -->
     <script src="https://telegram.org"></script>
     <style>
         body { font-family: Tahoma, sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 20px; direction: rtl; }
         h1 { color: #333; font-size: 20px; }
         #user-info { margin-bottom: 15px; color: #0088cc; font-weight: bold; }
         .board { display: grid; grid-template-columns: repeat(3, 80px); gap: 10px; justify-content: center; margin-top: 20px; }
-        .cell { width: 80px; height: 80px; background: white; border: 2px solid #0088cc; font-size: 32px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 10px; }
+        .cell { width: 80px; height: 80px; background: white; border: 2px solid #0088cc; font-size: 32px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 10px; user-select: none; }
         .cell.taken { cursor: not-allowed; }
         #status { margin-top: 20px; font-size: 18px; font-weight: bold; color: #ff3366; }
+        button { margin-top: 20px; padding: 10px 20px; font-size: 16px; background: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer; font-family: Tahoma; }
     </style>
 </head>
 <body>
 
     <h1>خوش آمدی به بازی دوز!</h1>
-    <!-- نمایش نام کاربر تلگرام -->
-    <div id="user-info">در حال بارگذاری...</div>
+    <div id="user-info">بازیکن: مهمان</div>
     
     <div class="board" id="board">
         <div class="cell" onclick="makeMove(this, 0)"></div>
@@ -35,18 +34,15 @@
     </div>
 
     <div id="status">نوبت شماست (X)</div>
+    <button onclick="resetGame()">شروع مجدد</button>
 
     <script>
-        // راه‌اندازی برنامه وب تلگرام
         const tg = window.Telegram.WebApp;
-        tg.expand(); // تمام‌صفحه کردن بازی در تلگرام
+        tg.expand();
 
-        // نمایش نام کاربر تلگرام در بازی
         const userInfo = document.getElementById('user-info');
         if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
             userInfo.innerText = "بازیکن: " + tg.initDataUnsafe.user.first_name;
-        } else {
-            userInfo.innerText = "بازیکن: مهمان (خارج از تلگرام)";
         }
 
         let board = ["", "", "", "", "", "", "", "", ""];
@@ -55,9 +51,9 @@
         function makeMove(cell, index) {
             if (board[index] !== "" || gameOver) return;
 
-            // حرکت کاربر (X)
             board[index] = "X";
             cell.innerText = "X";
+            cell.style.color = "#0088cc";
             cell.classList.add('taken');
 
             if (checkWin("X")) {
@@ -72,7 +68,6 @@
                 return;
             }
 
-            // حرکت ربات (O) - یک خانه خالی رندوم انتخاب می‌کند
             document.getElementById('status').innerText = "نوبت ربات...";
             setTimeout(botMove, 500);
         }
@@ -88,6 +83,7 @@
             
             const cellElements = document.getElementsByClassName('cell');
             cellElements[randomIndex].innerText = "O";
+            cellElements[randomIndex].style.color = "#ff3366";
             cellElements[randomIndex].classList.add('taken');
 
             if (checkWin("O")) {
@@ -105,6 +101,17 @@
             return winPatterns.some(pattern => {
                 return pattern.every(idx => board[idx] === player);
             });
+        }
+
+        function resetGame() {
+            board = ["", "", "", "", "", "", "", "", ""];
+            gameOver = false;
+            document.getElementById('status').innerText = "نوبت شماست (X)";
+            const cellElements = document.getElementsByClassName('cell');
+            for (let cell of cellElements) {
+                cell.innerText = "";
+                cell.classList.remove('taken');
+            }
         }
     </script>
 </body>
