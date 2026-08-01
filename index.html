@@ -3,46 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بازی دوز تلگرام</title>
+    <title>سنگ کاغذ قیچی تلگرام</title>
     <script src="https://telegram.org"></script>
     <style>
         body { font-family: Tahoma, sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 20px; direction: rtl; }
-        h1 { color: #333; font-size: 20px; }
-        #user-info { margin-bottom: 15px; color: #0088cc; font-weight: bold; }
-        .board { display: grid; grid-template-columns: repeat(3, 80px); gap: 10px; justify-content: center; margin-top: 20px; }
-        .cell { width: 80px; height: 80px; background: white; border: 2px solid #0088cc; font-size: 32px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 10px; user-select: none; }
-        .cell.taken { cursor: not-allowed; }
-        #status { margin-top: 20px; font-size: 18px; font-weight: bold; color: #ff3366; }
-        .controls { margin-top: 25px; display: flex; gap: 10px; justify-content: center; }
-        button { padding: 12px 20px; font-size: 15px; border: none; border-radius: 8px; cursor: pointer; font-family: Tahoma; font-weight: bold; transition: 0.2s; }
-        .btn-reset { background: #0088cc; color: white; }
-        .btn-reset:hover { background: #006699; }
-        .btn-sound { background: #4bcd5d; color: white; }
-        .btn-sound.off { background: #8e8e93; }
+        h1 { color: #333; font-size: 22px; }
+        #user-info { margin-bottom: 20px; color: #0088cc; font-weight: bold; font-size: 16px; }
+        .choices { display: flex; gap: 15px; justify-content: center; margin-top: 30px; }
+        .choice-btn { font-size: 40px; background: white; border: 3px solid #0088cc; border-radius: 15px; width: 80px; height: 80px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .choice-btn:hover { background: #e6f7ff; transform: scale(1.1); }
+        .result-box { margin-top: 30px; font-size: 18px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: inline-block; min-width: 250px; }
+        #status { font-weight: bold; font-size: 20px; color: #ff3366; margin-top: 15px; }
     </style>
 </head>
 <body>
 
-    <h1>خوش آمدی به بازی دوز!</h1>
+    <h1>بازی سنگ، کاغذ، قیچی! ✌️✊✋</h1>
     <div id="user-info">بازیکن: مهمان</div>
     
-    <div class="board" id="board">
-        <div class="cell" onclick="makeMove(this, 0)"></div>
-        <div class="cell" onclick="makeMove(this, 1)"></div>
-        <div class="cell" onclick="makeMove(this, 2)"></div>
-        <div class="cell" onclick="makeMove(this, 3)"></div>
-        <div class="cell" onclick="makeMove(this, 4)"></div>
-        <div class="cell" onclick="makeMove(this, 5)"></div>
-        <div class="cell" onclick="makeMove(this, 6)"></div>
-        <div class="cell" onclick="makeMove(this, 7)"></div>
-        <div class="cell" onclick="makeMove(this, 8)"></div>
+    <div class="choices">
+        <button class="choice-btn" onclick="play('سنگ')">✊</button>
+        <button class="choice-btn" onclick="play('کاغذ')">✋</button>
+        <button class="choice-btn" onclick="play('قیچی')">✌️</button>
     </div>
 
-    <div id="status">نوبت شماست (X)</div>
-
-    <div class="controls">
-        <button class="btn-reset" onclick="resetGame()">🔄 شروع مجدد</button>
-        <button class="btn-sound" id="soundBtn" onclick="toggleSound()">🔊 صدا: روشن</button>
+    <div class="result-box">
+        <div>انتخاب شما: <span id="user-choice">-</span></div>
+        <div>انتخاب ربات: <span id="bot-choice">-</span></div>
+        <div id="status">یک گزینه را انتخاب کنید!</div>
     </div>
 
     <script>
@@ -55,123 +43,31 @@
             }
         }
 
-        let board = ["", "", "", "", "", "", "", "", ""];
-        let gameOver = false;
-        let isSoundOn = true;
-
-        let audioCtx = null;
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
-
-        function playTone(freq, type, duration) {
-            if (!isSoundOn) return;
-            try {
-                initAudio();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = type;
-                osc.frequency.value = freq;
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-                osc.stop(audioCtx.currentTime + duration);
-            } catch (e) {
-                console.log("Audio Error");
-            }
-        }
-
-        function toggleSound() {
-            isSoundOn = !isSoundOn;
-            const soundBtn = document.getElementById('soundBtn');
-            if (isSoundOn) {
-                soundBtn.innerText = "🔊 صدا: روشن";
-                soundBtn.classList.remove('off');
+        function play(userChoice) {
+            document.getElementById('user-choice').innerText = userChoice;
+            
+            // انتخاب رندوم ربات
+            const options = ["سنگ", "کاغذ", "قیچی"];
+            const botChoice = options[Math.floor(Math.random() * 3)];
+            document.getElementById('bot-choice').innerText = botChoice;
+            
+            const statusDiv = document.getElementById('status');
+            
+            // بررسی برنده و بازنده
+            if (userChoice === botChoice) {
+                statusDiv.innerText = "بازی مساوی شد! 🤝";
+                statusDiv.style.color = "#8e8e93";
+            } else if (
+                (userChoice === "سنگ" && botChoice === "قیچی") ||
+                (userChoice === "کاغذ" && botChoice === "سنگ") ||
+                (userChoice === "قیچی" && botChoice === "کاغذ")
+            ) {
+                statusDiv.innerText = "شما برنده شدید! 🎉";
+                statusDiv.style.color = "#4bcd5d";
             } else {
-                soundBtn.innerText = "🔇 صدا: خاموش";
-                soundBtn.classList.add('off');
+                statusDiv.innerText = "ربات برنده شد! 🤖";
+                statusDiv.style.color = "#ff3366";
             }
-        }
-
-        function makeMove(cell, index) {
-            if (board[index] !== "" || gameOver) return;
-
-            playTone(523, "sine", 0.1);
-            board[index] = "X";
-            cell.innerText = "X";
-            cell.style.color = "#0088cc";
-            cell.classList.add('taken');
-
-            if (checkWin("X")) {
-                document.getElementById('status').innerText = "شما برنده شدید! 🎉";
-                playTone(587, "triangle", 0.4);
-                gameOver = true;
-                return;
-            }
-
-            if (!board.includes("")) {
-                document.getElementById('status').innerText = "بازی مساوی شد! 🤝";
-                gameOver = true;
-                return;
-            }
-
-            document.getElementById('status').innerText = "نوبت ربات...";
-            setTimeout(botMove, 400);
-        }
-
-        function botMove() {
-            if (gameOver) return;
-            
-            let emptyCells = [];
-            board.forEach((val, idx) => { if (val === "") emptyCells.push(idx); });
-
-            if (emptyCells.length === 0) return;
-
-            let randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-            board[randomIndex] = "O";
-            
-            const cellElements = document.getElementsByClassName('cell');
-            cellElements[randomIndex].innerText = "O";
-            cellElements[randomIndex].style.color = "#ff3366";
-            cellElements[randomIndex].classList.add('taken');
-            playTone(392, "sine", 0.1);
-
-            if (checkWin("O")) {
-                document.getElementById('status').innerText = "ربات برنده شد! 🤖";
-                playTone(220, "sawtooth", 0.4);
-                gameOver = true;
-                return;
-            }
-
-            document.getElementById('status').innerText = "نوبت شماست (X)";
-        }
-
-        function checkWin(player) {
-            // ساخت الگوهای برنده با آرایه‌های صریح عددی بدون خطا
-            const p = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8],
-                [0, 3, 6], [1, 4, 7], [2, 5, 8],
-                [0, 4, 8], [2, 4, 6]
-            ];
-            return p.some(pattern => {
-                return pattern.every(idx => board[idx] === player);
-            });
-        }
-
-        function resetGame() {
-            board = ["", "", "", "", "", "", "", "", ""];
-            gameOver = false;
-            document.getElementById('status').innerText = "نوبت شماست (X)";
-            const cellElements = document.getElementsByClassName('cell');
-            for (let cell of cellElements) {
-                cell.innerText = "";
-                cell.classList.remove('taken');
-            }
-            playTone(440, "sine", 0.15);
         }
     </script>
 </body>
