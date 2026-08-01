@@ -13,7 +13,12 @@
         .cell { width: 80px; height: 80px; background: white; border: 2px solid #0088cc; font-size: 32px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 10px; user-select: none; }
         .cell.taken { cursor: not-allowed; }
         #status { margin-top: 20px; font-size: 18px; font-weight: bold; color: #ff3366; }
-        button { margin-top: 20px; padding: 10px 20px; font-size: 16px; background: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer; font-family: Tahoma; }
+        .controls { margin-top: 25px; display: flex; gap: 10px; justify-content: center; }
+        button { padding: 12px 20px; font-size: 15px; border: none; border-radius: 8px; cursor: pointer; font-family: Tahoma; font-weight: bold; transition: 0.2s; }
+        .btn-reset { background: #0088cc; color: white; }
+        .btn-reset:hover { background: #006699; }
+        .btn-sound { background: #4bcd5d; color: white; }
+        .btn-sound.off { background: #8e8e93; }
     </style>
 </head>
 <body>
@@ -34,7 +39,12 @@
     </div>
 
     <div id="status">نوبت شماست (X)</div>
-    <button onclick="resetGame()">شروع مجدد</button>
+
+    <!-- بخش دکمه‌های کنترل بازی -->
+    <div class="controls">
+        <button class="btn-reset" onclick="resetGame()">🔄 شروع مجدد</button>
+        <button class="btn-sound" id="soundBtn" onclick="toggleSound()">🔊 صدا: روشن</button>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
@@ -48,10 +58,40 @@
 
         let board = ["", "", "", "", "", "", "", "", ""];
         let gameOver = false;
+        let isSoundOn = true;
+
+        // ساخت صداهای فرضی به کمک مروگر بدون نیاز به فایل صوتی خارجی
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration) {
+            if (!isSoundOn) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function toggleSound() {
+            isSoundOn = !isSoundOn;
+            const soundBtn = document.getElementById('soundBtn');
+            if (isSoundOn) {
+                soundBtn.innerText = "🔊 صدا: روشن";
+                soundBtn.classList.remove('off');
+            } else {
+                soundBtn.innerText = "🔇 صدا: خاموش";
+                soundBtn.classList.add('off');
+            }
+        }
 
         function makeMove(cell, index) {
             if (board[index] !== "" || gameOver) return;
 
+            playTone(523.25, "sine", 0.1); // صدای کلیک بازیکن (نت دو)
             board[index] = "X";
             cell.innerText = "X";
             cell.style.color = "#0088cc";
@@ -59,6 +99,7 @@
 
             if (checkWin("X")) {
                 document.getElementById('status').innerText = "شما برنده شدید! 🎉";
+                playTone(587.33, "triangle", 0.4); // صدای برنده شدن
                 gameOver = true;
                 return;
             }
@@ -88,9 +129,11 @@
             cellElements[randomIndex].innerText = "O";
             cellElements[randomIndex].style.color = "#ff3366";
             cellElements[randomIndex].classList.add('taken');
+            playTone(392.00, "sine", 0.1); // صدای حرکت ربات (نت سل)
 
             if (checkWin("O")) {
                 document.getElementById('status').innerText = "ربات برنده شد! 🤖";
+                playTone(220.00, "sawtooth", 0.5); // صدای باختن
                 gameOver = true;
                 return;
             }
@@ -115,6 +158,7 @@
                 cell.innerText = "";
                 cell.classList.remove('taken');
             }
+            playTone(440.00, "sine", 0.15); // صدای ریستارت بازی
         }
     </script>
 </body>
