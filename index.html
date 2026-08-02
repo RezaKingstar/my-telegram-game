@@ -2,83 +2,105 @@
 <html lang="fa">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
-    <title>تپ کلیکر تلگرام</title>
-    <script src="https://telegram.org"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Stack Game</title>
     <style>
-        body { font-family: Tahoma, sans-serif; text-align: center; background: #1a1a1a; margin: 0; padding: 20px; direction: rtl; color: white; overflow: hidden; }
-        h1 { color: #fff; font-size: 20px; margin-top: 10px; }
-        #user-info { margin-bottom: 20px; color: #0088cc; font-weight: bold; }
-        .score-container { font-size: 36px; font-weight: bold; margin: 20px 0; color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
-        .coin-wrapper { display: flex; justify-content: center; margin-top: 40px; }
-        .coin { width: 160px; height: 160px; background: linear-gradient(135deg, #ffd700, #ffa500); border-radius: 50%; border: 8px solid #cc8400; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 60px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); user-select: none; transition: transform 0.05s ease; }
-        .coin:active { transform: scale(0.92); box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
-        .upgrade-section { margin-top: 50px; background: #2a2a2a; padding: 15px; border-radius: 12px; display: inline-block; min-width: 260px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .upgrade-btn { background: #4bcd5d; color: white; border: none; padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; font-family: Tahoma; width: 100%; transition: 0.2s; }
-        .upgrade-btn:disabled { background: #555; color: #aaa; cursor: not-allowed; }
+        body { margin: 0; overflow: hidden; background-color: #1e1e2f; font-family: sans-serif; user-select: none; }
+        #score { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 48px; color: #fff; font-weight: bold; z-index: 10; }
+        #tg-btn { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 12px 24px; font-size: 18px; background: #0088cc; color: white; border: none; border-radius: 8px; cursor: pointer; display: none; z-index: 10; }
     </style>
+    <!-- لود خودکار اسکریپت تلگرام و کتابخانه گرافیکی Three.js -->
+    <script src="https://telegram.org"></script>
+    <script src="https://cloudflare.com"></script>
 </head>
 <body>
-
-    <h1>بازی سکه تلگرام 🪙</h1>
-    <div id="user-info">بازیکن: مهمان</div>
-    
-    <div class="score-container" id="score">0</div>
-
-    <div class="coin-wrapper">
-        <div class="coin" id="coinBtn" onclick="clickCoin()">🪙</div>
-    </div>
-
-    <div class="upgrade-section">
-        <div style="margin-bottom: 10px; font-size: 14px; color: #ccc;">قدرت هر کلیک: <span id="clickPower">۱</span></div>
-        <button class="upgrade-btn" id="upgradeBtn" onclick="buyUpgrade()" disabled>ارتقا کلیک (هزینه: ۵۰ سکه)</button>
-    </div>
+    <div id="score">0</div>
+    <button id="tg-btn" onclick="sendScoreToTelegram()">ثبت امتیاز و دریافت جایزه 💰</button>
 
     <script>
         const tg = window.Telegram.WebApp;
-        if (tg) {
-            tg.expand();
-            const userInfo = document.getElementById('user-info');
-            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                userInfo.innerText = "بازیکن: " + tg.initDataUnsafe.user.first_name;
-            }
-        }
+        tg.expand();
 
-        let coins = 0;
-        let power = 1;
-        let upgradeCost = 50;
-
-        function updateUI() {
-            document.getElementById('score').innerText = coins;
-            document.getElementById('clickPower').innerText = power;
-            document.getElementById('upgradeBtn').innerText = "ارتقا کلیک (هزینه: " + upgradeCost + " سکه)";
-            
-            if (coins >= upgradeCost) {
-                document.getElementById('upgradeBtn').disabled = false;
-            } else {
-                document.getElementById('upgradeBtn').disabled = true;
-            }
-        }
-
-        function clickCoin() {
-            coins = coins + power;
-            updateUI();
-            
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('medium');
-            }
-        }
-
-        function buyUpgrade() {
-            if (coins >= upgradeCost) {
-                coins = coins - upgradeCost;
-                power = power + 1;
-                upgradeCost = Math.round(upgradeCost * 2.2);
-                updateUI();
-            }
-        }
+        let scene, camera, renderer;
+        let score = 0;
+        let gameActive = true;
         
-        updateUI();
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1e1e2f);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            dirLight.position.set(10, 20, 15);
+            scene.add(dirLight);
+
+            const aspect = window.innerWidth / window.innerHeight;
+            const d = 5;
+            camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+            camera.position.set(8, 8, 8);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            createBlock(0, 0, 3, 3, 0x0088cc);
+
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('pointerdown', handleAction);
+            
+            animate();
+        }
+
+        function createBlock(x, z, w, l, color) {
+            const geometry = new THREE.BoxGeometry(w, 1, l);
+            const material = new THREE.MeshStandardMaterial({ color: color });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, score, z);
+            scene.add(mesh);
+        }
+
+        function handleAction() {
+            if (!gameActive) return;
+            score++;
+            document.getElementById('score').innerText = score;
+            
+            const randomColor = Math.random() * 0xffffff;
+            createBlock(0, 0, 3, 3, randomColor);
+            camera.position.y += 1;
+            
+            if (score > 5 && Math.random() < 0.2) {
+                gameOver();
+            }
+        }
+
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('score').innerText = "امتیاز نهایی: " + score;
+            document.getElementById('tg-btn').style.display = "block";
+        }
+
+        function onWindowResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            const d = 5;
+            camera.left = -d * aspect;
+            camera.right = d * aspect;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        function sendScoreToTelegram() {
+            tg.sendData(JSON.stringify({ score: score }));
+            tg.close();
+        }
+
+        init();
     </script>
 </body>
 </html>
